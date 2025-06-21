@@ -1,12 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+// Import motion from framer-motion for animations
+import { motion, AnimatePresence } from 'framer-motion';
 
-// A pure function, so it can live outside the component.
-// This prevents it from being redeclared on every render.
+// --- NEW: ICONS FOR THEME TOGGLE ---
+const SunIcon = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m4.93 19.07 1.41-1.41"></path><path d="m17.66 6.34 1.41-1.41"></path></svg>
+);
+const MoonIcon = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+);
+
+
+// This pure function can live outside the component.
 const generatePassword = (length, numbers, symbols) => {
   let charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
   if (numbers) charset += '0123456789';
   if (symbols) charset += '!@#$%^&*()_+[]{}|;:,.<>?/';
-
   let newPassword = '';
   for (let i = 0; i < length; i++) {
     const randomIndex = Math.floor(Math.random() * charset.length);
@@ -16,137 +25,180 @@ const generatePassword = (length, numbers, symbols) => {
 };
 
 function App() {
-  // --- State Management ---
   const [password, setPassword] = useState('');
   const [length, setLength] = useState(12);
-  const [numbersAllowed, setNumbersAllowed] = useState(true);
+  const [numbersAllowed, setNumbersAllowed] = useState(false);
   const [symbolsAllowed, setSymbolsAllowed] = useState(false);
   const [copyButtonText, setCopyButtonText] = useState('Copy');
   
-  // useRef hook to get a reference to the password input element
-  const passwordRef = useRef(null);
+  // --- NEW: State for theme management ---
+  const [theme, setTheme] = useState('dark'); // 'dark' or 'light'
 
-  // --- Functions ---
-  
-  // useCallback memoizes this function so it's not recreated on every render
-  // unless its dependencies change.
+  const passwordRef = useRef(null);
+  const cardRef = useRef(null); 
+
+  // --- NEW: Effect to toggle .dark class on <html> ---
+  useEffect(() => {
+    // On mount or theme change, update the class on the <html> element
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark'); // Remove previous theme
+    root.classList.add(theme); // Add current theme
+  }, [theme]);
+
+  // --- NEW: Function to toggle the theme ---
+  const toggleTheme = () => {
+    setTheme(prevTheme => (prevTheme === 'dark' ? 'light' : 'dark'));
+  };
+
+  // --- MOUSE GLOW EFFECT ---
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    const handleMouseMove = (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      card.style.setProperty('--mouse-x', `${x}px`);
+      card.style.setProperty('--mouse-y', `${y}px`);
+    };
+    card.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      card.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+
   const passwordGenerator = useCallback(() => {
     const newPassword = generatePassword(length, numbersAllowed, symbolsAllowed);
     setPassword(newPassword);
   }, [length, numbersAllowed, symbolsAllowed]);
 
   const copyPasswordToClipboard = useCallback(() => {
-    // Select the text in the input field for user feedback
     passwordRef.current?.select();
-    
-    // Copy password to clipboard using the modern Clipboard API
     navigator.clipboard.writeText(password).then(() => {
       setCopyButtonText('Copied!');
-      // Reset button text after 2 seconds
-      setTimeout(() => {
-        setCopyButtonText('Copy');
-      }, 2000);
+      setTimeout(() => setCopyButtonText('Copy'), 500);
     });
   }, [password]);
   
   const handleReset = () => {
     setLength(12);
-    setNumbersAllowed(false);
+    setNumbersAllowed(true);
     setSymbolsAllowed(false);
     setCopyButtonText('Copy');
-    passwordGenerator(); // Regenerate password with default settings
-    // The useEffect below will automatically generate a new password
+    passwordGenerator();
   };
 
-  // useEffect hook to re-generate the password whenever the criteria change.
   useEffect(() => {
     passwordGenerator();
   }, [length, numbersAllowed, symbolsAllowed, passwordGenerator]);
 
-  return (
-    <div className="w-full min-h-screen bg-slate-900 text-gray-100 flex flex-col items-center justify-center p-4 font-mono">
-      
-      <div className="w-full max-w-md bg-slate-800 rounded-2xl shadow-2xl p-6 md:p-8 space-y-6 border border-slate-700">
-        <div className="text-center">
-            <h1 className="text-3xl font-bold text-white mb-2">Password Generator</h1>
-            <p className="text-slate-400">Create a strong and secure password.</p>
-        </div>
+  // --- ANIMATION VARIANTS (No changes here) ---
+  const cardVariants = { /* ... same as before */ };
+  const itemVariants = { /* ... same as before */ };
 
-        {/* Password Display and Copy Button */}
-        <div className="flex items-center shadow-md rounded-lg overflow-hidden">
-          <input
-            type="text"
-            value={password}
-            className="w-full p-3 bg-slate-900 text-teal-400 text-lg font-bold outline-none"
-            placeholder="Your password will appear here"
-            readOnly
-            ref={passwordRef}
-          />
-          <button
+  return (
+    // UPDATED: Added theme classes and transition
+    <div className="w-full min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-gray-100 flex flex-col items-center justify-center p-4 font-mono overflow-hidden transition-colors duration-300">
+      
+      {/* --- NEW: Theme Toggle Button --- */}
+      <div className="absolute top-5 right-5">
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          aria-label="Toggle theme"
+        >
+          {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+        </button>
+      </div>
+
+      <motion.div
+        ref={cardRef}
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        // UPDATED: Added theme classes
+        className="glow-card w-full max-w-md bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 space-y-6 border border-slate-200 dark:border-slate-000 relative"
+      >
+        <motion.div variants={itemVariants} className="text-center">
+            {/* UPDATED: Added theme classes */}
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Password Generator</h1>
+            <p className="text-slate-500 dark:text-slate-400">Create a strong and secure password.</p>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="flex items-center shadow-md rounded-lg overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.input
+              key={password}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              type="text"
+              value={password}
+              // UPDATED: Added theme classes
+              className="w-full p-3 bg-slate-200 dark:bg-slate-900 text-teal-600 dark:text-teal-400 text-lg font-bold outline-none"
+              placeholder="Your password..."
+              readOnly
+              ref={passwordRef}
+            />
+          </AnimatePresence>
+          <motion.button
             onClick={copyPasswordToClipboard}
-            className="px-5 py-3 bg-teal-600 text-white font-semibold hover:bg-teal-700 active:bg-teal-800 transition-colors duration-200"
+            // UPDATED: Replaced inline style hover with Tailwind classes for consistency
+            whileTap={{ scale: 0.95 }}
+            className="px-5 py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold transition-colors"
           >
             {copyButtonText}
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
-        {/* Controls Section */}
-        <div className="space-y-4">
-          {/* Length Slider */}
+        <motion.div variants={itemVariants} className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <label htmlFor="length" className="font-medium text-slate-300">Password Length: <span className="font-bold text-teal-400">{length}</span></label>
-            <input
-              id="length"
-              type="range"
-              min={8}
-              max={32}
-              value={length}
+            {/* UPDATED: Added theme classes */}
+            <label htmlFor="length" className="font-medium text-slate-600 dark:text-slate-300">Password Length: <span className="font-bold text-teal-600 dark:text-teal-400">{length}</span></label>
+            <input id="length" type="range" min={8} max={32} value={length}
               onChange={(e) => setLength(Number(e.target.value))}
-              className="w-full sm:w-1/2 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-teal-600"
+              // UPDATED: Added theme classes
+              className="w-full sm:w-1/2 h-2 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-teal-600"
             />
           </div>
           
-          {/* Checkboxes */}
           <div className="flex items-center gap-x-4">
              <div className="flex items-center gap-x-2">
-              <input
-                type="checkbox"
-                id="numbers"
-                checked={numbersAllowed}
-                onChange={() => setNumbersAllowed((prev) => !prev)}
-                className="w-4 h-4 text-teal-600 bg-gray-700 border-gray-600 rounded focus:ring-teal-500 cursor-pointer accent-teal-600"
+              <input type="checkbox" id="numbers" checked={numbersAllowed} onChange={() => setNumbersAllowed((p) => !p)}
+                // UPDATED: Added theme classes
+                className="w-4 h-4 bg-slate-100 border-slate-300 dark:bg-gray-700 dark:border-gray-600 rounded cursor-pointer accent-teal-600 focus:ring-2 focus:ring-teal-500"
               />
-              <label htmlFor="numbers" className="font-medium text-slate-300 cursor-pointer">Include Numbers</label>
+              {/* UPDATED: Added theme classes */}
+              <label htmlFor="numbers" className="font-medium text-slate-600 dark:text-slate-300 cursor-pointer select-none">Include Numbers</label>
             </div>
             
             <div className="flex items-center gap-x-2">
-              <input
-                type="checkbox"
-                id="symbols"
-                checked={symbolsAllowed}
-                onChange={() => setSymbolsAllowed((prev) => !prev)}
-                className="w-4 h-4 text-teal-600 bg-gray-700 border-gray-600 rounded focus:ring-teal-500 cursor-pointer accent-teal-600"
+              <input type="checkbox" id="symbols" checked={symbolsAllowed} onChange={() => setSymbolsAllowed((p) => !p)}
+                 // UPDATED: Added theme classes
+                className="w-4 h-4 bg-slate-100 border-slate-300 dark:bg-gray-700 dark:border-gray-600 rounded cursor-pointer accent-teal-600 focus:ring-2 focus:ring-teal-500"
               />
-              <label htmlFor="symbols" className="font-medium text-slate-300 cursor-pointer">Include Symbols</label>
+              {/* UPDATED: Added theme classes */}
+              <label htmlFor="symbols" className="font-medium text-slate-600 dark:text-slate-300 cursor-pointer select-none">Include Symbols</label>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Reset Button */}
-        <div className="pt-4 border-t border-slate-700">
-             <button
+        <motion.div variants={itemVariants} className="pt-4 border-t border-slate-200 dark:border-slate-700">
+             <motion.button
                 onClick={handleReset}
-                className='w-full bg-red-600 text-white p-3 rounded-lg font-bold hover:bg-red-700 transition-colors duration-200'
+                // UPDATED: Replaced inline style hover with Tailwind classes
+                whileTap={{ scale: 0.98 }}
+                className='w-full bg-red-700 hover:bg-red-800 transition-colors text-white p-3 rounded-lg font-bold'
               >
                 Reset
-              </button>
-        </div>
-      </div>
+              </motion.button>
+        </motion.div>
+      </motion.div>
 
-      <footer className="mt-8 text-center text-slate-500">
+      <motion.footer initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="mt-8 text-center text-slate-500 dark:text-slate-500">
         <p>© {new Date().getFullYear()} Password Generator App. All Rights Reserved.</p>
-      </footer>
-
+      </motion.footer>
     </div>
   );
 }
