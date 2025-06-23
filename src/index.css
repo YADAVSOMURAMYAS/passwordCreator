@@ -1,32 +1,3 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *)) 
 
-/* Add this to your main CSS file (e.g., index.css) */
-.glow-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  /* The glow is a radial gradient centered on the mouse position */
-  background: radial-gradient(
-    circle at var(--mouse-x) var(--mouse-y),
-    rgba(34, 211, 238, 0.2), /* A semi-transparent teal/cyan color */
-    rgba(34, 211, 238, 0) 40% /* Fades to transparent */
-  );
-  border-radius: inherit; /* Makes the glow follow the card's border-radius */
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-  z-index: 1; /* Sits on top of the background but below the content */
-}
-
-/* When hovering over the card, the glow becomes visible */
-.glow-card:hover::before {
-  opacity: 1;
-}
-
-/* Ensure the card's content sits above the glow effect */
-.glow-card > * {
-  z-index: 2;
-  position: relative;
-}
